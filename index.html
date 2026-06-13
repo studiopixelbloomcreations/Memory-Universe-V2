@@ -478,19 +478,59 @@
 
                 const playPhoto = (idx) => {
                     const photo = this.photos[idx];
-                    const duration = photo.duration || 15;
+                    const duration = Math.max(3, (photo.duration || 8) * 0.6); // 60% faster
 
-                    // Simple animation: photo appears, holds, disappears
-                    gsap.timeline()
-                        .to({}, { duration })
-                        .then(() => {
+                    // Create photo texture
+                    const url = URL.createObjectURL(photo.blob);
+                    new THREE.TextureLoader().load(url, (texture) => {
+                        // Create photo plane
+                        const geom = new THREE.PlaneGeometry(4, 2.8);
+                        const mat = new THREE.MeshStandardMaterial({
+                            map: texture,
+                            transparent: true,
+                            opacity: 0
+                        });
+                        const photoMesh = new THREE.Mesh(geom, mat);
+                        photoMesh.position.z = 5;
+                        photoMesh.scale.set(0.1, 0.1, 0.1);
+                        this.scene.add(photoMesh);
+
+                        const tl = gsap.timeline();
+
+                        // Phase 1: Emerge (0.4s)
+                        tl.to(photoMesh.position, { z: 0, duration: 0.4, ease: 'power3.out' }, 0);
+                        tl.to(photoMesh.scale, { x: 1, y: 1, z: 1, duration: 0.6, ease: 'power2.out' }, 0);
+                        tl.to(mat, { opacity: 1, duration: 0.4 }, 0);
+
+                        // Phase 2: Hold/Float (remaining time)
+                        tl.to(photoMesh.position, {
+                            y: '+=0.05',
+                            duration: duration - 1.2,
+                            ease: 'sine.inOut',
+                            yoyo: true,
+                            repeat: 1
+                        }, 0.6);
+
+                        // Phase 3: Exit (0.6s)
+                        tl.to(photoMesh.scale, { x: 0.05, y: 0.05, z: 0.05, duration: 0.6, ease: 'power2.in' }, duration - 0.6);
+                        tl.to(photoMesh.position, { z: -10, duration: 0.6, ease: 'power2.in' }, duration - 0.6);
+
+                        tl.eventCallback('onComplete', () => {
+                            this.scene.remove(photoMesh);
+                            mat.dispose();
+                            geom.dispose();
+                            texture.dispose();
+                            URL.revokeObjectURL(url);
+
+                            // Next photo
                             if (idx < this.photos.length - 1) {
                                 playPhoto(idx + 1);
                             } else {
-                                // Loop back
-                                this.startSequence();
+                                // Loop
+                                gsap.delayedCall(1, () => this.startSequence());
                             }
                         });
+                    });
                 };
 
                 playPhoto(0);
