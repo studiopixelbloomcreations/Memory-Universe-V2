@@ -5,19 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Memory Universe</title>
 
-    <!-- CDN Dependencies (in order) -->
+    <!-- CDN Dependencies -->
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/postprocessing/EffectComposer.js"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/postprocessing/RenderPass.js"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/postprocessing/ShaderPass.js"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/shaders/VignetteShader.js"></script>
-    <script async src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/shaders/FilmShader.js"></script>
     <script async src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/gsap.min.js"></script>
     <script async src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <style>
         * {
@@ -34,1662 +26,454 @@
             height: 100vh;
         }
 
-        /* ===== VIEWER MODE ===== */
-        #canvas-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            z-index: 1;
-        }
+        #canvas { display: block; width: 100%; height: 100%; }
 
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
+        #viewer { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        #studio { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; }
 
-        #overlay-html {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: none;
-            z-index: 10;
-        }
-
-        .caption-card {
-            position: absolute;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%) translateY(24px);
-            opacity: 0;
-            background: rgba(10, 5, 20, 0.65);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 20px;
-            padding: 22px 36px;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-            text-align: center;
-            z-index: 11;
-            pointer-events: auto;
-        }
-
-        .caption-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 30px;
-            font-weight: 700;
-            color: #ffffff;
-            letter-spacing: 3px;
-            margin-bottom: 8px;
-            line-height: 1.2;
-        }
-
-        .caption-text {
-            font-family: 'Inter', sans-serif;
-            font-size: 16px;
-            font-weight: 300;
-            color: rgba(255,255,255,0.72);
-            line-height: 1.65;
-            max-width: 300px;
-        }
-
-        .studio-button {
-            position: fixed;
-            bottom: 24px;
-            left: 24px;
-            z-index: 12;
-            background: rgba(10, 5, 20, 0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(192, 132, 252, 0.25);
-            border-radius: 12px;
-            padding: 10px 18px;
-            color: #c084fc;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
-            pointer-events: auto;
-        }
-
-        .studio-button:hover {
-            border-color: #c084fc;
-            box-shadow: 0 0 0 3px rgba(192,132,252,0.18);
-        }
-
-        /* ===== STUDIO MODE ===== */
-        #studio-root {
-            display: none;
-            flex-direction: column;
-            width: 100%;
-            height: 100vh;
-            background: #07070f;
-            overflow: hidden;
-            z-index: 2;
-        }
-
-        .studio-sidebar {
-            width: 280px;
-            background: #0f0f1a;
-            border-right: 1px solid rgba(255,255,255,0.08);
-            padding: 24px 16px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .studio-header {
-            font-size: 18px;
-            font-weight: 600;
-            color: #e2e8f0;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .studio-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .studio-button-main {
-            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #db2777 100%);
-            border: none;
-            color: white;
-            padding: 14px 24px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
+        /* VIEWER */
+        .studio-btn {
+            position: fixed; bottom: 24px; left: 24px; z-index: 100;
+            background: rgba(10,5,20,0.7); backdrop-filter: blur(16px);
+            border: 1px solid rgba(192,132,252,0.25);
+            border-radius: 12px; padding: 10px 18px;
+            color: #c084fc; cursor: pointer; font-size: 13px;
             transition: all 0.2s;
-            box-shadow: 0 4px 24px rgba(168,85,247,0.3);
-            width: 100%;
+        }
+        .studio-btn:hover { border-color: #c084fc; box-shadow: 0 0 20px rgba(192,132,252,0.3); }
+
+        /* STUDIO */
+        .studio-container {
+            display: flex; width: 100%; height: 100%;
         }
 
-        .studio-button-main:hover {
-            transform: scale(1.025);
-            box-shadow: 0 4px 24px rgba(168,85,247,0.5);
+        .sidebar {
+            width: 280px; background: #0f0f1a;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            padding: 24px; overflow-y: auto;
         }
 
-        .sidebar-button {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px;
-            padding: 12px 16px;
-            color: #e2e8f0;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.18s;
+        .main {
+            flex: 1; display: flex; flex-direction: column;
+            padding: 24px; overflow-y: auto;
         }
 
-        .sidebar-button:hover {
-            border-color: rgba(192,132,252,0.3);
-            box-shadow: 0 0 0 3px rgba(192,132,252,0.1);
+        .btn {
+            background: linear-gradient(135deg, #7c3aed, #db2777);
+            border: none; color: white; padding: 14px 24px;
+            border-radius: 12px; font-weight: 600; cursor: pointer;
+            width: 100%; margin-bottom: 12px; transition: all 0.2s;
         }
+        .btn:hover { transform: scale(1.025); }
 
-        .studio-workspace {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            padding: 24px;
-            overflow-y: auto;
+        .upload-zone {
+            border: 2px dashed rgba(192,132,252,0.35);
+            border-radius: 16px; padding: 40px; text-align: center;
+            cursor: pointer; transition: all 0.2s;
+            background: rgba(192,132,252,0.02);
         }
-
-        .timeline-bar {
-            background: #0a0a14;
-            border-radius: 8px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 12px;
-            border: 1px solid rgba(255,255,255,0.08);
-        }
-
-        .timeline-segments {
-            display: flex;
-            flex: 1;
-            gap: 2px;
-            height: 40px;
-            align-items: center;
-        }
-
-        .timeline-segment {
-            flex: 1;
-            height: 100%;
-            border-radius: 4px;
-            background: #1a1a28;
-            cursor: pointer;
-            transition: all 0.18s;
-            position: relative;
-            min-width: 20px;
-        }
-
-        .timeline-segment:hover {
-            height: 48px;
-            box-shadow: 0 0 12px rgba(192,132,252,0.3);
-        }
-
-        .timeline-label {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: rgba(255,255,255,0.45);
-            white-space: nowrap;
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: #c084fc; background: rgba(192,132,252,0.08);
         }
 
         .photo-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-            flex: 1;
-            overflow-y: auto;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px; margin-top: 20px;
         }
 
         .photo-card {
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            transition: all 0.18s;
+            border-radius: 16px; padding: 16px;
+            transition: all 0.2s;
         }
-
         .photo-card:hover {
             border-color: rgba(192,132,252,0.3);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
         }
 
-        .photo-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .photo-thumb {
+            width: 100%; height: 140px;
+            background: #0a0a14; border-radius: 8px;
+            object-fit: cover; margin-bottom: 12px;
         }
 
-        .photo-card-delete {
-            background: transparent;
-            border: 1px solid rgba(255,100,100,0.3);
-            color: #ff6464;
-            padding: 4px 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.15s;
+        input, textarea {
+            width: 100%; padding: 8px 12px;
+            background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px; color: #e2e8f0; font-family: Inter;
+            margin-bottom: 8px; font-size: 13px;
         }
-
-        .photo-card-delete:hover {
-            border-color: #ff6464;
-            background: rgba(255,100,100,0.1);
-        }
-
-        .photo-thumbnail {
-            width: 100%;
-            height: 180px;
-            background: #0a0a14;
-            border-radius: 10px;
-            object-fit: cover;
-            display: block;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .form-label {
-            font-size: 12px;
-            font-weight: 500;
-            color: rgba(255,255,255,0.6);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .form-input, .form-textarea {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 8px;
-            padding: 10px 12px;
-            color: #e2e8f0;
-            font-size: 14px;
-            font-family: 'Inter', sans-serif;
-            transition: all 0.18s;
-        }
-
-        .form-input:focus, .form-textarea:focus {
-            outline: none;
-            border-color: #c084fc;
+        input:focus, textarea:focus {
+            outline: none; border-color: #c084fc;
             box-shadow: 0 0 0 3px rgba(192,132,252,0.18);
         }
 
-        .form-textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
+        .fade { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; opacity: 0; pointer-events: none; z-index: 999; }
 
-        .duration-slider {
-            width: 100%;
-        }
-
-        .duration-value {
-            font-size: 12px;
-            color: #fbbf24;
-            font-weight: 600;
-        }
-
-        .upload-zone {
-            border: 2px dashed rgba(192,132,252,0.35);
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: rgba(192,132,252,0.02);
-        }
-
-        .upload-zone:hover {
-            border-color: #c084fc;
-            background: rgba(192,132,252,0.05);
-            box-shadow: 0 0 20px rgba(192,132,252,0.15);
-        }
-
-        .upload-zone.drag-active {
-            border-color: #c084fc;
-            background: rgba(192,132,252,0.08);
-            box-shadow: 0 0 40px rgba(192,132,252,0.25);
-        }
-
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-        }
-
-        .upload-text {
-            font-size: 16px;
-            font-weight: 500;
-            color: #e2e8f0;
-            margin-bottom: 8px;
-        }
-
-        .upload-hint {
-            font-size: 13px;
-            color: rgba(255,255,255,0.45);
-        }
-
-        .settings-panel {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 280px;
-            height: 100vh;
-            background: rgba(15,15,26,0.95);
-            backdrop-filter: blur(10px);
-            z-index: 100;
-            overflow-y: auto;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease;
-            border-right: 1px solid rgba(255,255,255,0.08);
-            padding: 24px;
-        }
-
-        .settings-panel.open {
-            transform: translateX(0);
-        }
-
-        .settings-close {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: transparent;
-            border: none;
-            color: #e2e8f0;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 4px;
-        }
-
-        .settings-title {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            margin-top: 8px;
-        }
-
-        .fade-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000000;
-            opacity: 0;
-            pointer-events: none;
-            z-index: 999;
-        }
-
-        .celebration-text {
-            position: fixed;
-            top: 50%;
-            left: 50%;
+        .loading {
+            position: fixed; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            text-align: center;
-            pointer-events: none;
-            z-index: 11;
-            opacity: 0;
+            background: rgba(0,0,0,0.8); padding: 40px;
+            border-radius: 12px; color: white; z-index: 9999;
+            text-align: center; font-family: Inter;
         }
 
-        .celebration-line1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 72px;
-            font-weight: 700;
-            font-style: italic;
-            letter-spacing: 6px;
-            color: #ffffff;
-            text-shadow: 0 0 40px rgba(192,132,252,0.8), 0 0 80px rgba(192,132,252,0.3);
-            line-height: 1;
-        }
+        .loading div { font-size: 18px; margin-bottom: 16px; }
+        .progress { width: 200px; height: 4px; background: rgba(255,255,255,0.2);
+            border-radius: 2px; margin: 0 auto; overflow: hidden; }
+        .progress div { width: 30%; height: 100%; background: #c084fc;
+            animation: pulse 1.5s infinite; }
 
-        .celebration-line2 {
-            font-family: 'Inter', sans-serif;
-            font-size: 38px;
-            font-weight: 300;
-            letter-spacing: 16px;
-            color: #fbbf24;
-            margin-top: 16px;
-        }
-
-        .celebration-line3 {
-            font-family: 'Inter', sans-serif;
-            font-size: 22px;
-            font-weight: 300;
-            font-style: italic;
-            letter-spacing: 2px;
-            color: rgba(255,255,255,0.65);
-            margin-top: 12px;
-        }
-
-        @media (max-width: 1279px) {
-            .studio-sidebar {
-                width: 64px;
-                padding: 12px 8px;
-            }
-            .photo-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .photo-grid {
-                grid-template-columns: 1fr;
-            }
-            .celebration-line1 {
-                font-size: 44px;
-            }
-            .celebration-line2 {
-                font-size: 24px;
-            }
-            .celebration-line3 {
-                font-size: 16px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="canvas-container"></div>
-    <div id="overlay-html"></div>
-    <div id="studio-root"></div>
-    <div class="fade-overlay"></div>
-    <div class="celebration-text">
-        <div class="celebration-line1"></div>
-        <div class="celebration-line2"></div>
-        <div class="celebration-line3"></div>
-    </div>
-    <div id="loading-indicator" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);padding:40px;border-radius:12px;color:#fff;text-align:center;z-index:9999;font-family:Inter,sans-serif;">
-        <div style="font-size:18px;margin-bottom:16px;">Loading Memory Universe...</div>
-        <div style="width:200px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;">
-            <div style="width:30%;height:100%;background:#c084fc;animation:pulse 1.5s infinite;"></div>
-        </div>
-    </div>
-
-    <style>
         @keyframes pulse {
             0%, 100% { width: 30%; }
             50% { width: 70%; }
         }
     </style>
+</head>
+<body>
+    <div class="fade" id="fade"></div>
+
+    <div id="viewer">
+        <canvas id="canvas"></canvas>
+        <button class="studio-btn" onclick="app.switchMode('studio')">⚙ Studio (S)</button>
+    </div>
+
+    <div id="studio">
+        <div class="studio-container">
+            <div class="sidebar">
+                <h2 style="margin-bottom: 20px; font-size: 18px;">🌌 Memory</h2>
+                <button class="btn" onclick="app.switchMode('viewer')">▶ LAUNCH</button>
+                <button class="btn" id="upload-btn" style="background: #666;">+ Upload</button>
+                <input type="file" id="file-input" multiple accept="image/*" style="display:none;">
+            </div>
+            <div class="main">
+                <div class="upload-zone" id="upload-zone">
+                    <div style="font-size: 48px; margin-bottom: 12px;">☁</div>
+                    <div style="font-size: 16px; margin-bottom: 8px;">Drop photos here</div>
+                    <div style="font-size: 13px; color: rgba(255,255,255,0.45);">JPG · PNG · WEBP</div>
+                </div>
+                <div class="photo-grid" id="photo-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div>Loading Memory Universe...</div>
+        <div class="progress"><div></div></div>
+    </div>
 
     <script>
-        // ===== EVENT BUS =====
-        const EventBus = {
-            events: {},
-            on(event, callback) {
-                if (!this.events[event]) this.events[event] = [];
-                this.events[event].push(callback);
-            },
-            off(event, callback) {
-                if (!this.events[event]) return;
-                this.events[event] = this.events[event].filter(cb => cb !== callback);
-            },
-            emit(event, data) {
-                if (!this.events[event]) return;
-                this.events[event].forEach(cb => cb(data));
+        class App {
+            constructor() {
+                this.mode = null;
+                this.photos = [];
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.particles = null;
             }
-        };
 
-        // ===== STORAGE ENGINE =====
-        const StorageEngine = (() => {
-            let db = null;
+            async init() {
+                try {
+                    // Wait for libraries
+                    await this.waitLibs();
+                    console.log('✓ Libraries loaded');
 
-            return {
-                async init() {
-                    return new Promise((resolve, reject) => {
-                        try {
-                            const req = indexedDB.open('memory-universe-v1', 1);
-                            req.onerror = () => {
-                                console.warn('IndexedDB unavailable, running in memory-only mode');
-                                resolve(null);
-                            };
-                            req.onsuccess = () => {
-                                db = req.result;
-                                console.log('✓ IndexedDB initialized');
-                                resolve(db);
-                            };
-                            req.onupgradeneeded = (e) => {
-                                try {
-                                    const store = e.target.result;
-                                    if (!store.objectStoreNames.contains('photos')) {
-                                        store.createObjectStore('photos', { keyPath: 'id' });
-                                    }
-                                    if (!store.objectStoreNames.contains('config')) {
-                                        store.createObjectStore('config', { keyPath: 'key' });
-                                    }
-                                    if (!store.objectStoreNames.contains('audio')) {
-                                        store.createObjectStore('audio', { keyPath: 'id' });
-                                    }
-                                    console.log('✓ IndexedDB schema created');
-                                } catch (err) {
-                                    console.error('Schema creation error:', err);
-                                    reject(err);
-                                }
-                            };
-                        } catch (error) {
-                            console.warn('IndexedDB access denied:', error);
-                            resolve(null);
-                        }
-                    });
-                },
+                    // Init IndexedDB
+                    this.db = await this.initDB();
+                    console.log('✓ Database ready');
 
-                async getAllPhotos() {
-                    return new Promise((resolve, reject) => {
-                        const tx = db.transaction('photos', 'readonly');
-                        const req = tx.objectStore('photos').getAll();
-                        req.onsuccess = () => {
-                            const photos = req.result.sort((a, b) => a.order - b.order);
-                            resolve(photos);
-                        };
-                        req.onerror = () => reject(req.error);
-                    });
-                },
+                    // Load photos
+                    this.photos = await this.loadPhotos();
+                    console.log('✓ Photos loaded:', this.photos.length);
 
-                async addPhoto(photo) {
-                    return new Promise((resolve, reject) => {
-                        const tx = db.transaction('photos', 'readwrite');
-                        const req = tx.objectStore('photos').add(photo);
-                        req.onsuccess = () => resolve(photo);
-                        req.onerror = () => reject(req.error);
-                    });
-                },
+                    // Setup Three.js
+                    await this.setupThree();
+                    console.log('✓ Three.js ready');
 
-                async updatePhoto(photo) {
-                    return new Promise((resolve, reject) => {
-                        const tx = db.transaction('photos', 'readwrite');
-                        const req = tx.objectStore('photos').put(photo);
-                        req.onsuccess = () => resolve(photo);
-                        req.onerror = () => reject(req.error);
-                    });
-                },
+                    // Setup UI
+                    this.setupUI();
+                    console.log('✓ UI ready');
 
-                async deletePhoto(id) {
-                    return new Promise((resolve, reject) => {
-                        const tx = db.transaction('photos', 'readwrite');
-                        const req = tx.objectStore('photos').delete(id);
-                        req.onsuccess = () => resolve();
-                        req.onerror = () => reject(req.error);
-                    });
-                },
+                    // Auto-determine mode
+                    const startMode = this.photos.length === 0 ? 'studio' : 'viewer';
+                    this.switchMode(startMode);
 
-                async getConfig() {
-                    return new Promise((resolve) => {
-                        const tx = db.transaction('config', 'readonly');
-                        const req = tx.objectStore('config').get('global');
-                        req.onsuccess = () => {
-                            resolve(req.result || {
-                                bloomIntensity: 0.85,
-                                particleDensity: 'medium',
-                                filmGrain: true,
-                                depthOfField: true,
-                                frameGlowColor: '#c084fc',
-                                nebulaColorA: '#1a0533',
-                                nebulaColorB: '#0a1a2e',
-                                audioEnabled: false,
-                                audioVolume: 0.70,
-                                transitionSounds: true,
-                                celebrationPrimary: 'Congratulations Dad',
-                                celebrationSecondary: 'From IP to ASP',
-                                celebrationTertiary: 'With love and pride — your family',
-                                celebrationDuration: 15,
-                                defaultDuration: 15,
-                                transitionOverlap: 1.5
-                            });
-                        };
-                    });
-                },
-
-                async saveConfig(config) {
-                    config.key = 'global';
-                    return new Promise((resolve, reject) => {
-                        const tx = db.transaction('config', 'readwrite');
-                        const req = tx.objectStore('config').put(config);
-                        req.onsuccess = () => resolve(config);
-                        req.onerror = () => reject(req.error);
-                    });
+                    document.getElementById('loading').style.display = 'none';
+                } catch (err) {
+                    console.error('Init error:', err);
+                    document.getElementById('loading').innerHTML = `
+                        <div style="color: #ff6464; font-size: 18px;">⚠️ Error</div>
+                        <div style="color: #aaa; font-size: 14px; margin-top: 12px;">${err.message}</div>
+                    `;
                 }
-            };
-        })();
+            }
 
-        // ===== SCENE ENGINE =====
-        const SceneEngine = (() => {
-            let scene, renderer, camera, composer;
-            let ambientLight, pointLightA, pointLightB, pointLightC;
-            let bloomPass;
+            waitLibs() {
+                return new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('CDN timeout')), 15000);
+                    const check = () => {
+                        if (typeof THREE !== 'undefined' && typeof gsap !== 'undefined') {
+                            clearTimeout(timeout);
+                            resolve();
+                        } else {
+                            setTimeout(check, 100);
+                        }
+                    };
+                    check();
+                });
+            }
 
-            return {
-                async init(config) {
+            async initDB() {
+                return new Promise((resolve) => {
                     try {
-                        // Renderer
-                        const container = document.getElementById('canvas-container');
-                        if (!container) throw new Error('Canvas container not found');
-
-                        renderer = new THREE.WebGLRenderer({
-                            antialias: true,
-                            alpha: false,
-                            powerPreference: 'high-performance'
-                        });
-                        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-                        renderer.setSize(window.innerWidth, window.innerHeight);
-                        renderer.shadowMap.enabled = true;
-                        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-                        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-                        renderer.toneMappingExposure = 1.2;
-                        renderer.outputEncoding = THREE.sRGBEncoding;
-                        renderer.setClearColor(0x020408);
-                        container.appendChild(renderer.domElement);
-                        console.log('✓ Renderer created');
-
-                        // Scene
-                        scene = new THREE.Scene();
-                        scene.fog = new THREE.FogExp2(0x050810, 0.012);
-                        console.log('✓ Scene created');
-
-                        // Camera
-                        const aspect = window.innerWidth / window.innerHeight;
-                        camera = new THREE.PerspectiveCamera(65, aspect, 0.1, 1000);
-                        camera.position.set(0, 0, 20);
-                        console.log('✓ Camera created');
-
-                        // Lighting
-                        ambientLight = new THREE.AmbientLight(0x1a0a2e, 0.4);
-                        scene.add(ambientLight);
-
-                        pointLightA = new THREE.PointLight(0xc084fc, 2.2);
-                        pointLightA.position.set(0, 8, 6);
-                        pointLightA.castShadow = true;
-                        scene.add(pointLightA);
-
-                        pointLightB = new THREE.PointLight(0x60a5fa, 1.4);
-                        pointLightB.position.set(-10, -4, 4);
-                        scene.add(pointLightB);
-
-                        pointLightC = new THREE.PointLight(0xfbbf24, 0.9);
-                        pointLightC.position.set(8, 10, -12);
-                        scene.add(pointLightC);
-                        console.log('✓ Lighting created');
-
-                        // Skybox sphere with nebula
-                        const skyGeom = new THREE.SphereGeometry(200, 64, 64);
-                        const skyMat = new THREE.ShaderMaterial({
-                            uniforms: {
-                                uTime: { value: 0 },
-                                uColorA: { value: new THREE.Color(config.nebulaColorA || '#1a0533') },
-                                uColorB: { value: new THREE.Color(config.nebulaColorB || '#0a1a2e') }
-                            },
-                            vertexShader: `
-                                varying vec3 vPosition;
-                                void main() {
-                                    vPosition = position;
-                                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                                }
-                            `,
-                            fragmentShader: `
-                                uniform float uTime;
-                                uniform vec3 uColorA;
-                                uniform vec3 uColorB;
-                                varying vec3 vPosition;
-
-                                float noise(vec3 p) {
-                                    return sin(p.x*0.5) * sin(p.y*0.5) * sin(p.z*0.5);
-                                }
-
-                                void main() {
-                                    vec3 nPos = normalize(vPosition);
-                                    vec3 offset = vec3(sin(uTime*0.002) * 2.0, cos(uTime*0.0015) * 2.0, 0.0);
-
-                                    float n1 = noise(nPos * 3.0 + offset) * 0.5 + 0.5;
-                                    float n2 = noise(nPos * 2.5 - offset * 0.8) * 0.5 + 0.5;
-
-                                    vec3 baseColor = vec3(0.008, 0.016, 0.031);
-                                    vec3 color = mix(baseColor, uColorA, n1 * 0.18);
-                                    color = mix(color, uColorB, n2 * 0.15);
-
-                                    float starField = step(0.98, sin(nPos.x * 200.0) * sin(nPos.y * 200.0) * sin(nPos.z * 200.0));
-                                    color += starField * 0.3;
-
-                                    gl_FragColor = vec4(color, 1.0);
-                                }
-                            `,
-                            side: THREE.BackSide
-                        });
-                        const skyMesh = new THREE.Mesh(skyGeom, skyMat);
-                        scene.add(skyMesh);
-                        console.log('✓ Skybox created');
-
-                        // Post-processing
-                        composer = new THREE.EffectComposer(renderer);
-                        const renderPass = new THREE.RenderPass(scene, camera);
-                        composer.addPass(renderPass);
-                        console.log('✓ RenderPass added');
-
-                        bloomPass = new THREE.UnrealBloomPass(
-                            new THREE.Vector2(window.innerWidth, window.innerHeight),
-                            config.bloomIntensity || 0.85,
-                            0.45,
-                            0.25
-                        );
-                        composer.addPass(bloomPass);
-                        console.log('✓ BloomPass added');
-
-                        const filmPass = new THREE.ShaderPass(THREE.FilmShader);
-                        filmPass.uniforms.nIntensity.value = 0.12;
-                        filmPass.uniforms.sIntensity.value = 0.0;
-                        filmPass.uniforms.sCount.value = 0;
-                        composer.addPass(filmPass);
-                        console.log('✓ FilmPass added');
-
-                        const vignettePass = new THREE.ShaderPass(THREE.VignetteShader);
-                        vignettePass.uniforms.offset.value = 0.85;
-                        vignettePass.uniforms.darkness.value = 0.65;
-                        composer.addPass(vignettePass);
-                        console.log('✓ VignettePass added');
-
-                        // Animate lights
-                        this.animateLights();
-
-                        // Handle resize
-                        window.addEventListener('resize', () => this.onWindowResize());
-
-                        console.log('✓ SceneEngine fully initialized');
-                        return { scene, camera, renderer, composer };
-                    } catch (error) {
-                        console.error('SceneEngine init failed:', error);
-                        throw error;
-                    }
-                },
-
-                animateLights() {
-                    const cycle = () => {
-                        const t = Date.now() * 0.001;
-                        const base1 = 2.2, base2 = 1.4, base3 = 0.9;
-                        pointLightA.intensity = base1 * (0.85 + 0.15 * Math.sin(t / 3.8));
-                        pointLightB.intensity = base2 * (0.85 + 0.15 * Math.sin(t / 5.2 + 1.5));
-                        pointLightC.intensity = base3 * (0.85 + 0.15 * Math.sin(t / 4.6 + 3.0));
-                        requestAnimationFrame(cycle);
-                    };
-                    cycle();
-                },
-
-                updateSkybox(colorA, colorB) {
-                    scene.children.find(obj => obj.material && obj.material.uniforms)?.material.uniforms.uColorA.value.setStyle(colorA);
-                    scene.children.find(obj => obj.material && obj.material.uniforms)?.material.uniforms.uColorB.value.setStyle(colorB);
-                },
-
-                setBloomIntensity(intensity) {
-                    if (bloomPass) bloomPass.strength = intensity;
-                },
-
-                getScene() { return scene; },
-                getCamera() { return camera; },
-                getRenderer() { return renderer; },
-                getComposer() { return composer; },
-
-                render() {
-                    if (composer) composer.render();
-                },
-
-                onWindowResize() {
-                    const w = window.innerWidth, h = window.innerHeight;
-                    camera.aspect = w / h;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(w, h);
-                    composer.setSize(w, h);
-                },
-
-                destroy() {
-                    if (renderer && renderer.domElement) {
-                        renderer.domElement.remove();
-                    }
-                }
-            };
-        })();
-
-        // ===== PARTICLE SYSTEM =====
-        const ParticleSystem = (() => {
-            let particles = null;
-            let scene = null;
-            const particleColors = [0xc084fc, 0x60a5fa, 0xfbbf24, 0xa78bfa, 0xffffff];
-
-            return {
-                init(sceneRef, config) {
-                    scene = sceneRef;
-                    const count = window.innerWidth < 768 ? 800 : 2000;
-
-                    const geometry = new THREE.BufferGeometry();
-                    const positions = new Float32Array(count * 3);
-                    const colors = new Float32Array(count * 3);
-                    const sizes = new Float32Array(count);
-                    const speeds = new Float32Array(count);
-                    const phases = new Float32Array(count);
-                    const velocities = new Float32Array(count * 3);
-
-                    for (let i = 0; i < count; i++) {
-                        const theta = Math.random() * Math.PI * 2;
-                        const phi = Math.random() * Math.PI;
-                        const r = Math.random() * 45;
-                        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-                        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-                        positions[i * 3 + 2] = r * Math.cos(phi);
-
-                        const color = new THREE.Color(particleColors[Math.floor(Math.random() * particleColors.length)]);
-                        colors[i * 3] = color.r;
-                        colors[i * 3 + 1] = color.g;
-                        colors[i * 3 + 2] = color.b;
-
-                        sizes[i] = 0.04 + Math.random() * 0.06;
-                        speeds[i] = 0.5 + Math.random() * 2.0;
-                        phases[i] = Math.random() * Math.PI * 2;
-
-                        velocities[i * 3] = (Math.random() - 0.5) * 0.004;
-                        velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.004;
-                        velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.004;
-                    }
-
-                    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-                    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-                    geometry.setAttribute('speed', new THREE.BufferAttribute(speeds, 1));
-                    geometry.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
-
-                    const material = new THREE.ShaderMaterial({
-                        uniforms: { uTime: { value: 0 } },
-                        vertexShader: `
-                            attribute float size;
-                            attribute float speed;
-                            attribute float phase;
-                            uniform float uTime;
-
-                            varying vec3 vColor;
-                            varying float vAlpha;
-
-                            void main() {
-                                vColor = color;
-                                float alpha = 0.2 + 0.55 * (sin(uTime * speed * 0.5 + phase) * 0.5 + 0.5);
-                                vAlpha = alpha;
-                                gl_PointSize = size * 200.0;
-                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        const req = indexedDB.open('memory-universe-v1', 1);
+                        req.onerror = () => resolve(null);
+                        req.onsuccess = () => resolve(req.result);
+                        req.onupgradeneeded = (e) => {
+                            const db = e.target.result;
+                            if (!db.objectStoreNames.contains('photos')) {
+                                db.createObjectStore('photos', { keyPath: 'id' });
                             }
-                        `,
-                        fragmentShader: `
-                            varying vec3 vColor;
-                            varying float vAlpha;
-
-                            void main() {
-                                float dist = distance(gl_PointCoord, vec2(0.5));
-                                if (dist > 0.5) discard;
-                                gl_FragColor = vec4(vColor, vAlpha * (1.0 - dist * 2.0));
-                            }
-                        `,
-                        transparent: true,
-                        depthWrite: false,
-                        blending: THREE.AdditiveBlending
-                    });
-
-                    particles = new THREE.Points(geometry, material);
-                    scene.add(particles);
-
-                    // Animate particles
-                    this.animate();
-                },
-
-                animate() {
-                    const cycle = () => {
-                        if (particles && particles.material.uniforms) {
-                            particles.material.uniforms.uTime.value = Date.now() * 0.001;
-
-                            // Particle movement (slow)
-                            const pos = particles.geometry.attributes.position.array;
-                            const vel = []; // Would need to store these
-
-                            // For now, just update time uniform for alpha animation
-                        }
-                        requestAnimationFrame(cycle);
-                    };
-                    cycle();
-                },
-
-                destroy() {
-                    if (particles) {
-                        particles.geometry.dispose();
-                        particles.material.dispose();
-                    }
-                }
-            };
-        })();
-
-        // ===== PHOTO ENGINE =====
-        const PhotoEngine = (() => {
-            let textureCache = new Map();
-            let captionOverlay = null;
-
-            return {
-                async createPhotoMesh(photoData, scene) {
-                    const group = new THREE.Group();
-
-                    // Photo plane
-                    const photoGeom = new THREE.PlaneGeometry(3.2, 2.2);
-                    let photoTexture;
-
-                    if (photoData.blob) {
-                        const url = URL.createObjectURL(photoData.blob);
-                        photoTexture = await new Promise(resolve => {
-                            new THREE.TextureLoader().load(url, resolve);
-                        });
-                    } else {
-                        photoTexture = new THREE.CanvasTexture(photoData.canvas);
-                    }
-
-                    const photoMat = new THREE.MeshStandardMaterial({
-                        map: photoTexture,
-                        roughness: 0.05,
-                        metalness: 0.12,
-                        side: THREE.FrontSide
-                    });
-
-                    const photoMesh = new THREE.Mesh(photoGeom, photoMat);
-                    photoMesh.castShadow = true;
-                    photoMesh.receiveShadow = true;
-                    group.add(photoMesh);
-
-                    // Glass frame
-                    const frameGeom = new THREE.PlaneGeometry(3.7, 2.7);
-                    const frameMat = new THREE.MeshPhysicalMaterial({
-                        color: 0xffffff,
-                        opacity: 0.07,
-                        transparent: true,
-                        roughness: 0.0,
-                        metalness: 0.15,
-                        transmission: 0.95,
-                        thickness: 0.15,
-                        ior: 1.52,
-                        reflectivity: 0.6,
-                        envMapIntensity: 2.5
-                    });
-
-                    const frameMesh = new THREE.Mesh(frameGeom, frameMat);
-                    frameMesh.position.z = -0.01;
-                    group.add(frameMesh);
-
-                    // Frame edge glow (4 strips)
-                    const glowColor = photoData.glowColor || 0xc084fc;
-                    const glowEdges = [
-                        { w: 3.7, h: 0.05, x: 0, y: 1.35 }, // top
-                        { w: 3.7, h: 0.05, x: 0, y: -1.35 }, // bottom
-                        { w: 0.05, h: 2.7, x: 1.85, y: 0 }, // right
-                        { w: 0.05, h: 2.7, x: -1.85, y: 0 } // left
-                    ];
-
-                    glowEdges.forEach(edge => {
-                        const edgeGeom = new THREE.PlaneGeometry(edge.w, edge.h);
-                        const edgeMat = new THREE.MeshBasicMaterial({
-                            color: glowColor,
-                            transparent: true,
-                            opacity: 0.5,
-                            blending: THREE.AdditiveBlending
-                        });
-                        const edgeMesh = new THREE.Mesh(edgeGeom, edgeMat);
-                        edgeMesh.position.z = 0.01;
-                        edgeMesh.position.x = edge.x;
-                        edgeMesh.position.y = edge.y;
-                        edgeMesh._isGlowEdge = true;
-                        group.add(edgeMesh);
-                    });
-
-                    // Shadow
-                    const shadowCanvas = document.createElement('canvas');
-                    shadowCanvas.width = shadowCanvas.height = 256;
-                    const shadowCtx = shadowCanvas.getContext('2d');
-                    const gradient = shadowCtx.createRadialGradient(128, 128, 30, 128, 128, 150);
-                    gradient.addColorStop(0, 'rgba(255,255,255,0.8)');
-                    gradient.addColorStop(1, 'rgba(255,255,255,0)');
-                    shadowCtx.fillStyle = gradient;
-                    shadowCtx.fillRect(0, 0, 256, 256);
-
-                    const shadowTex = new THREE.CanvasTexture(shadowCanvas);
-                    const shadowGeom = new THREE.PlaneGeometry(4.2, 3.0);
-                    const shadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, opacity: 0.55 });
-                    const shadowMesh = new THREE.Mesh(shadowGeom, shadowMat);
-                    shadowMesh.position.z = -0.05;
-                    shadowMesh.position.y = -0.2;
-                    group.add(shadowMesh);
-
-                    // Reflection
-                    const reflectionGeom = new THREE.PlaneGeometry(3.2, 2.2);
-                    const reflectionMat = new THREE.MeshStandardMaterial({
-                        map: photoTexture,
-                        opacity: 0.18,
-                        transparent: true,
-                        roughness: 0.8
-                    });
-                    const reflectionMesh = new THREE.Mesh(reflectionGeom, reflectionMat);
-                    reflectionMesh.position.y = -1.3;
-                    reflectionMesh.rotation.x = Math.PI;
-                    group.add(reflectionMesh);
-
-                    // Caption overlay
-                    if (photoData.title || photoData.caption) {
-                        const captionEl = document.createElement('div');
-                        captionEl.className = 'caption-card';
-                        captionEl.innerHTML = `
-                            <div class="caption-title">${photoData.title || ''}</div>
-                            <div class="caption-text">${photoData.caption || ''}</div>
-                        `;
-                        document.getElementById('overlay-html').appendChild(captionEl);
-                        group.captionEl = captionEl;
-                    }
-
-                    group.photoData = photoData;
-                    group.photoTexture = photoTexture;
-
-                    return group;
-                },
-
-                destroyPhotoMesh(group) {
-                    group.traverse(child => {
-                        if (child.geometry) child.geometry.dispose();
-                        if (child.material) {
-                            if (child.material.map) child.material.map.dispose();
-                            child.material.dispose();
-                        }
-                    });
-                    if (group.captionEl) group.captionEl.remove();
-                }
-            };
-        })();
-
-        // ===== NARRATIVE ENGINE =====
-        const NarrativeEngine = (() => {
-            let photos = [];
-            let currentIndex = 0;
-            let scene = null;
-            let camera = null;
-            let isPlaying = false;
-
-            return {
-                async init(photosData, sceneRef, cameraRef) {
-                    photos = photosData;
-                    scene = sceneRef;
-                    camera = cameraRef;
-                },
-
-                async start() {
-                    if (isPlaying || photos.length === 0) return;
-                    isPlaying = true;
-                    currentIndex = 0;
-                    await this.playSequence();
-                },
-
-                async playSequence() {
-                    for (currentIndex = 0; currentIndex < photos.length; currentIndex++) {
-                        await this.playPhoto(currentIndex);
-                    }
-                    // Celebration
-                    await this.showCelebration();
-                    // Loop back
-                    if (isPlaying) await this.playSequence();
-                },
-
-                showCelebration() {
-                    return new Promise(resolve => {
-                        EventBus.emit('celebration-start', { onComplete: resolve });
-                    });
-                },
-
-                async playPhoto(index) {
-                    const photoData = photos[index];
-                    const duration = photoData.duration || 15;
-
-                    const photoGroup = await PhotoEngine.createPhotoMesh(photoData, scene);
-                    scene.add(photoGroup);
-
-                    return new Promise(resolve => {
-                        const tl = gsap.timeline({
-                            onComplete: () => {
-                                PhotoEngine.destroyPhotoMesh(photoGroup);
-                                scene.remove(photoGroup);
-                                resolve();
-                            }
-                        });
-
-                        // Phase 1: Emergence (0-2s)
-                        tl.to(photoGroup.position, { x: 0, y: 0, z: -65, duration: 0 }, 0);
-                        tl.to(photoGroup.scale, { x: 0.08, y: 0.08, z: 0.08, duration: 0 }, 0);
-                        tl.to(photoGroup.rotation, {
-                            x: (Math.random() - 0.5) * 0.6,
-                            y: (Math.random() - 0.5) * 0.8,
-                            z: (Math.random() - 0.5) * 0.3,
-                            duration: 0
-                        }, 0);
-                        tl.to(photoGroup.children[0].material, { opacity: 0.25, duration: 2 }, 0);
-                        tl.to(photoGroup.scale, { x: 0.55, y: 0.55, z: 0.55, duration: 2, ease: 'power2.out' }, 0);
-
-                        // Phase 2: Approach (2-5s)
-                        tl.to(photoGroup.position, { z: -20, duration: 3, ease: 'power3.out' }, 2);
-                        tl.to(photoGroup.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power2.inOut' }, 2);
-                        tl.to(photoGroup.scale, { x: 0.9, y: 0.9, z: 0.9, duration: 3, ease: 'power2.out' }, 2);
-                        tl.to(photoGroup.children[0].material, { opacity: 0.85, duration: 2 }, 2);
-
-                        // Phase 3: Reveal (5-7s)
-                        tl.to(photoGroup.rotation, {
-                            y: THREE.MathUtils.degToRad(-28),
-                            duration: 0.4,
-                            ease: 'power2.in'
-                        }, 5);
-                        tl.to(photoGroup.rotation, {
-                            y: 0,
-                            duration: 1.5,
-                            ease: 'power2.out'
-                        }, 5.4);
-                        tl.to(photoGroup.position, { z: -8, duration: 2, ease: 'power2.inOut' }, 5);
-                        tl.to(photoGroup.scale, { x: 1.0, y: 1.0, z: 1.0, duration: 2, ease: 'power2.out' }, 5);
-                        tl.to(photoGroup.children[0].material, { opacity: 1.0, duration: 1 }, 5);
-
-                        // Phase 4: Center Moment (7-10s) - micro-float
-                        tl.to(photoGroup.position, {
-                            y: '+=0.12',
-                            duration: 3,
-                            ease: 'sine.inOut',
-                            yoyo: true,
-                            repeat: 1
-                        }, 7);
-
-                        // Phase 5: Caption Entrance (9-10.5s)
-                        if (photoGroup.captionEl) {
-                            tl.to(photoGroup.captionEl, {
-                                opacity: 1,
-                                y: 0,
-                                duration: 0.9,
-                                ease: 'power2.out'
-                            }, 9);
-                        }
-
-                        // Phase 6: Contemplation (10.5 to duration-4)
-                        const phase6Start = 10.5;
-                        const phase6Duration = Math.max(2, duration - 14);
-                        tl.to(photoGroup.position, {
-                            y: `+=${0.18 * phase6Duration}`,
-                            duration: phase6Duration,
-                            ease: 'linear'
-                        }, phase6Start);
-
-                        // Phase 7: Exit Dissolve (duration-4 to duration)
-                        const phase7Start = duration - 4;
-                        if (photoGroup.captionEl) {
-                            tl.to(photoGroup.captionEl, {
-                                opacity: 0,
-                                y: -16,
-                                duration: 0.7
-                            }, phase7Start);
-                        }
-                        tl.to(photoGroup.scale, {
-                            x: 0.01,
-                            y: 0.01,
-                            z: 0.01,
-                            duration: 2,
-                            ease: 'power2.in'
-                        }, phase7Start);
-                        tl.to(photoGroup.children[0].material, {
-                            opacity: 0,
-                            duration: 2
-                        }, phase7Start);
-
-                        // Total duration
-                        tl.to({}, { duration }, 0);
-                    });
-                },
-
-                stop() {
-                    isPlaying = false;
-                    gsap.killAll();
-                }
-            };
-        })();
-
-        // ===== CELEBRATION ENGINE =====
-        const CelebrationEngine = (() => {
-            let scene = null;
-            let isActive = false;
-
-            return {
-                init(sceneRef) {
-                    scene = sceneRef;
-                    EventBus.on('celebration-start', (data) => this.play(data));
-                },
-
-                async play(data = {}) {
-                    if (isActive) return;
-                    isActive = true;
-
-                    const celebrationText = document.querySelector('.celebration-text');
-
-                    const tl = gsap.timeline({
-                        onComplete: () => {
-                            isActive = false;
-                            if (data.onComplete) data.onComplete();
-                        }
-                    });
-
-                    // Reset and hide
-                    tl.set(celebrationText, { opacity: 0 }, 0);
-                    tl.set(document.querySelector('.celebration-line1'), { y: 35, opacity: 0 }, 0);
-                    tl.set(document.querySelector('.celebration-line2'), { y: 20, opacity: 0 }, 0);
-                    tl.set(document.querySelector('.celebration-line3'), { y: 0, opacity: 0 }, 0);
-
-                    // Pause (0-1.2s)
-                    tl.to(celebrationText, { opacity: 1 }, 0);
-
-                    // Text reveals
-                    tl.to(document.querySelector('.celebration-line1'), {
-                        opacity: 1,
-                        y: 0,
-                        duration: 1.3,
-                        ease: 'power3.out'
-                    }, 3.5);
-
-                    tl.to(document.querySelector('.celebration-line2'), {
-                        opacity: 1,
-                        y: 0,
-                        duration: 1,
-                        ease: 'power2.out'
-                    }, 5.5);
-
-                    tl.to(document.querySelector('.celebration-line3'), {
-                        opacity: 1,
-                        y: 0,
-                        duration: 0.9,
-                        ease: 'power2.out'
-                    }, 7);
-
-                    // Hold
-                    tl.to({}, { duration: 6 }, 8.5);
-
-                    // Dissolve
-                    tl.to(document.querySelector('.celebration-line1'), {
-                        opacity: 0,
-                        y: -20,
-                        duration: 0.7
-                    }, 14);
-
-                    tl.to(document.querySelector('.celebration-line2'), {
-                        opacity: 0,
-                        y: -20,
-                        duration: 0.7
-                    }, 14.3);
-
-                    tl.to(document.querySelector('.celebration-line3'), {
-                        opacity: 0,
-                        y: -20,
-                        duration: 0.7
-                    }, 14.6);
-                }
-            };
-        })();
-
-        // ===== CONTROL STUDIO =====
-        const ControlStudio = (() => {
-            let isOpen = false;
-            let photos = [];
-
-            return {
-                init() {
-                    this.render();
-                    this.attachEventListeners();
-                },
-
-                render() {
-                    const studioRoot = document.getElementById('studio-root');
-                    studioRoot.innerHTML = `
-                        <div class="studio-sidebar">
-                            <div class="studio-header">🌌 Memory</div>
-                            <button class="studio-button-main" id="launch-btn">▶ LAUNCH</button>
-                            <button class="sidebar-button" id="add-photos-btn">+ Add Photos</button>
-                            <button class="sidebar-button" id="settings-btn">⚙ Settings</button>
-                            <button class="sidebar-button" id="audio-btn">♪ Audio</button>
-                        </div>
-                        <div class="studio-main">
-                            <div class="studio-workspace">
-                                <div class="timeline-bar">
-                                    <div class="timeline-segments" id="timeline-segments"></div>
-                                    <div class="timeline-label" id="duration-label">⏱ 0m 0s</div>
-                                </div>
-                                <div class="upload-zone" id="upload-zone">
-                                    <div class="upload-icon">☁</div>
-                                    <div class="upload-text">Drop your memories here</div>
-                                    <div class="upload-hint">JPG · PNG · WEBP — up to 10MB each</div>
-                                </div>
-                                <div class="photo-grid" id="photo-grid"></div>
-                            </div>
-                        </div>
-                    `;
-
-                    // Settings panel
-                    const settingsPanel = document.createElement('div');
-                    settingsPanel.className = 'settings-panel';
-                    settingsPanel.id = 'settings-panel';
-                    settingsPanel.innerHTML = `
-                        <button class="settings-close" id="settings-close">✕</button>
-                        <h2 class="settings-title">Settings</h2>
-                        <div class="form-group">
-                            <label class="form-label">Bloom Intensity</label>
-                            <input type="range" min="0" max="2" step="0.1" value="0.85" id="bloom-slider" class="duration-slider">
-                            <span class="duration-value" id="bloom-value">0.85</span>
-                        </div>
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label class="form-label">Primary Message</label>
-                            <input type="text" id="celebration-primary" value="Congratulations Dad" class="form-input" maxlength="60">
-                        </div>
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label class="form-label">Secondary Message</label>
-                            <input type="text" id="celebration-secondary" value="From IP to ASP" class="form-input" maxlength="40">
-                        </div>
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label class="form-label">Tertiary Message</label>
-                            <input type="text" id="celebration-tertiary" value="With love and pride — your family" class="form-input" maxlength="80">
-                        </div>
-                    `;
-                    studioRoot.appendChild(settingsPanel);
-                },
-
-                attachEventListeners() {
-                    // Launch
-                    document.getElementById('launch-btn').addEventListener('click', () => {
-                        EventBus.emit('mode-switch', 'viewer');
-                    });
-
-                    // Settings
-                    document.getElementById('settings-btn').addEventListener('click', () => {
-                        document.getElementById('settings-panel').classList.add('open');
-                    });
-
-                    document.getElementById('settings-close')?.addEventListener('click', () => {
-                        document.getElementById('settings-panel').classList.remove('open');
-                    });
-
-                    // Upload
-                    const uploadZone = document.getElementById('upload-zone');
-                    uploadZone.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        uploadZone.classList.add('drag-active');
-                    });
-
-                    uploadZone.addEventListener('dragleave', () => {
-                        uploadZone.classList.remove('drag-active');
-                    });
-
-                    uploadZone.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        uploadZone.classList.remove('drag-active');
-                        this.handleFiles(e.dataTransfer.files);
-                    });
-
-                    uploadZone.addEventListener('click', () => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.multiple = true;
-                        input.accept = 'image/*';
-                        input.addEventListener('change', (e) => this.handleFiles(e.target.files));
-                        input.click();
-                    });
-
-                    // Settings sliders
-                    document.getElementById('bloom-slider')?.addEventListener('change', async (e) => {
-                        const value = parseFloat(e.target.value);
-                        document.getElementById('bloom-value').textContent = value.toFixed(2);
-                        const config = await StorageEngine.getConfig();
-                        config.bloomIntensity = value;
-                        await StorageEngine.saveConfig(config);
-                        EventBus.emit('config-update', config);
-                    });
-                },
-
-                async handleFiles(files) {
-                    for (const file of files) {
-                        if (!file.type.startsWith('image/')) continue;
-                        if (file.size > 10 * 1024 * 1024) continue;
-
-                        const blob = file;
-                        const id = Math.random().toString(36).substr(2, 9);
-                        const photo = {
-                            id,
-                            order: photos.length,
-                            blob,
-                            title: file.name.split('.')[0],
-                            caption: '',
-                            duration: 15,
-                            addedAt: Date.now(),
-                            updatedAt: Date.now()
                         };
+                    } catch (e) {
+                        resolve(null);
+                    }
+                });
+            }
 
-                        photos.push(photo);
-                        await StorageEngine.addPhoto(photo);
-                        this.renderPhotoCard(photo);
+            async loadPhotos() {
+                if (!this.db) return [];
+                return new Promise((resolve) => {
+                    try {
+                        const tx = this.db.transaction('photos', 'readonly');
+                        const req = tx.objectStore('photos').getAll();
+                        req.onsuccess = () => resolve(req.result.sort((a, b) => a.order - b.order));
+                        req.onerror = () => resolve([]);
+                    } catch (e) {
+                        resolve([]);
+                    }
+                });
+            }
+
+            async setupThree() {
+                const canvas = document.getElementById('canvas');
+
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x020408);
+
+                // Scene
+                this.scene = new THREE.Scene();
+
+                // Camera
+                const aspect = window.innerWidth / window.innerHeight;
+                this.camera = new THREE.PerspectiveCamera(65, aspect, 0.1, 1000);
+                this.camera.position.z = 20;
+
+                // Lighting
+                this.scene.add(new THREE.AmbientLight(0x1a0a2e, 0.4));
+                const light = new THREE.PointLight(0xc084fc, 2);
+                light.position.set(0, 8, 6);
+                this.scene.add(light);
+
+                // Skybox (simple background)
+                const geom = new THREE.SphereGeometry(200, 32, 32);
+                const mat = new THREE.MeshBasicMaterial({ color: 0x0a1a2e, side: THREE.BackSide });
+                this.scene.add(new THREE.Mesh(geom, mat));
+
+                // Particles
+                this.createParticles();
+
+                // Render loop
+                this.renderer.setAnimationLoop(() => this.render());
+
+                // Resize handler
+                window.addEventListener('resize', () => this.onResize());
+            }
+
+            createParticles() {
+                const count = 800;
+                const geom = new THREE.BufferGeometry();
+                const positions = new Float32Array(count * 3);
+
+                for (let i = 0; i < count; i++) {
+                    positions[i * 3] = (Math.random() - 0.5) * 90;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 90;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 90;
+                }
+
+                geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                const mat = new THREE.PointsMaterial({ color: 0xc084fc, size: 0.1, transparent: true, opacity: 0.6 });
+                this.particles = new THREE.Points(geom, mat);
+                this.scene.add(this.particles);
+            }
+
+            setupUI() {
+                document.getElementById('upload-btn').addEventListener('click', () => {
+                    document.getElementById('file-input').click();
+                });
+
+                document.getElementById('file-input').addEventListener('change', (e) => this.handleFiles(e.target.files));
+
+                const zone = document.getElementById('upload-zone');
+                zone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    zone.classList.add('drag-over');
+                });
+                zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+                zone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    zone.classList.remove('drag-over');
+                    this.handleFiles(e.dataTransfer.files);
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'v' || e.key === 'V') this.switchMode('viewer');
+                    if (e.key === 's' || e.key === 'S' || e.key === 'Escape') this.switchMode('studio');
+                });
+
+                this.renderPhotos();
+            }
+
+            async handleFiles(files) {
+                for (const file of files) {
+                    if (!file.type.startsWith('image/')) continue;
+                    if (file.size > 10 * 1024 * 1024) continue;
+
+                    const photo = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        order: this.photos.length,
+                        blob: file,
+                        title: file.name.split('.')[0],
+                        caption: '',
+                        duration: 15
+                    };
+
+                    this.photos.push(photo);
+                    if (this.db) {
+                        const tx = this.db.transaction('photos', 'readwrite');
+                        tx.objectStore('photos').add(photo);
                     }
 
-                    this.updateTimeline();
-                },
+                    this.renderPhotos();
+                }
+            }
 
-                renderPhotoCard(photo) {
-                    const grid = document.getElementById('photo-grid');
+            renderPhotos() {
+                const grid = document.getElementById('photo-grid');
+                grid.innerHTML = '';
+
+                this.photos.forEach((photo, idx) => {
                     const card = document.createElement('div');
                     card.className = 'photo-card';
-                    card.id = `photo-${photo.id}`;
 
-                    const thumbUrl = URL.createObjectURL(photo.blob);
+                    const url = URL.createObjectURL(photo.blob);
 
                     card.innerHTML = `
-                        <div class="photo-card-header">
-                            <span>Photo</span>
-                            <button class="photo-card-delete" data-id="${photo.id}">Delete</button>
+                        <img src="${url}" class="photo-thumb" alt="photo">
+                        <input type="text" placeholder="Title" value="${photo.title}"
+                            onchange="app.updatePhoto(${idx}, 'title', this.value)">
+                        <textarea placeholder="Caption"
+                            onchange="app.updatePhoto(${idx}, 'caption', this.value)">${photo.caption}</textarea>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label>Duration: <span>${photo.duration}s</span></label>
+                            <input type="range" min="8" max="30" value="${photo.duration}"
+                                style="width: 60%; margin: 0;" onchange="app.updatePhoto(${idx}, 'duration', parseInt(this.value)); this.previousElementSibling.querySelector('span').textContent = this.value + 's';">
                         </div>
-                        <img src="${thumbUrl}" class="photo-thumbnail" alt="Photo">
-                        <div class="form-group">
-                            <label class="form-label">Title</label>
-                            <input type="text" class="form-input photo-title" value="${photo.title}" maxlength="60">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Caption</label>
-                            <textarea class="form-textarea photo-caption" maxlength="200">${photo.caption}</textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Duration (${photo.duration}s)</label>
-                            <input type="range" min="8" max="30" step="1" value="${photo.duration}" class="duration-slider photo-duration">
-                        </div>
+                        <button style="background: #ff6464; color: white; padding: 8px; border: none; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 8px;"
+                            onclick="app.deletePhoto(${idx})">Delete</button>
                     `;
 
                     grid.appendChild(card);
+                });
+            }
 
-                    // Event listeners
-                    card.querySelector('.photo-title').addEventListener('change', (e) => {
-                        photo.title = e.target.value;
-                        StorageEngine.updatePhoto(photo);
-                    });
-
-                    card.querySelector('.photo-caption').addEventListener('change', (e) => {
-                        photo.caption = e.target.value;
-                        StorageEngine.updatePhoto(photo);
-                    });
-
-                    card.querySelector('.photo-duration').addEventListener('change', (e) => {
-                        photo.duration = parseInt(e.target.value);
-                        StorageEngine.updatePhoto(photo);
-                        this.updateTimeline();
-                    });
-
-                    card.querySelector('.photo-card-delete').addEventListener('click', async () => {
-                        await StorageEngine.deletePhoto(photo.id);
-                        photos = photos.filter(p => p.id !== photo.id);
-                        card.remove();
-                        this.updateTimeline();
-                    });
-                },
-
-                updateTimeline() {
-                    const totalDuration = photos.reduce((sum, p) => sum + (p.duration || 15), 0);
-                    const minutes = Math.floor(totalDuration / 60);
-                    const seconds = totalDuration % 60;
-                    document.getElementById('duration-label').textContent = `⏱ ${minutes}m ${seconds}s`;
-
-                    const segmentsContainer = document.getElementById('timeline-segments');
-                    segmentsContainer.innerHTML = '';
-                    photos.forEach(p => {
-                        const seg = document.createElement('div');
-                        seg.className = 'timeline-segment';
-                        seg.style.flex = p.duration || 15;
-                        seg.style.backgroundColor = `hsl(${Math.random() * 360}, 60%, 35%)`;
-                        segmentsContainer.appendChild(seg);
-                    });
-                },
-
-                destroy() {
-                    const studioRoot = document.getElementById('studio-root');
-                    studioRoot.innerHTML = '';
+            updatePhoto(idx, field, value) {
+                if (this.photos[idx]) {
+                    this.photos[idx][field] = value;
+                    if (this.db) {
+                        const tx = this.db.transaction('photos', 'readwrite');
+                        tx.objectStore('photos').put(this.photos[idx]);
+                    }
                 }
-            };
-        })();
+            }
 
-        // ===== APP CONTROLLER =====
-        const AppController = (() => {
-            let currentMode = null;
-            let config = null;
-            let sceneData = null;
-
-            return {
-                async init() {
-                    // Initialize storage
-                    await StorageEngine.init();
-
-                    // Load config
-                    config = await StorageEngine.getConfig();
-
-                    // Update celebration text
-                    document.querySelector('.celebration-line1').textContent = config.celebrationPrimary;
-                    document.querySelector('.celebration-line2').textContent = config.celebrationSecondary;
-                    document.querySelector('.celebration-line3').textContent = config.celebrationTertiary;
-
-                    // Initialize scene (always needed for viewer)
-                    sceneData = await SceneEngine.init(config);
-                    ParticleSystem.init(sceneData.scene, config);
-                    CelebrationEngine.init(sceneData.scene);
-
-                    // Setup animation loop
-                    this.setupAnimationLoop(sceneData);
-
-                    // Setup mode switching
-                    EventBus.on('mode-switch', (mode) => this.switchMode(mode));
-
-                    // Keyboard shortcuts
-                    document.addEventListener('keydown', (e) => {
-                        if (e.key === 'v' || e.key === 'V') this.switchMode('viewer');
-                        if (e.key === 's' || e.key === 'S' || e.key === 'Escape') this.switchMode('studio');
-                    });
-
-                    // Load photos and determine initial mode
-                    const photos = await StorageEngine.getAllPhotos();
-                    const startMode = photos.length === 0 ? 'studio' : 'viewer';
-                    this.switchMode(startMode);
-                },
-
-                async switchMode(mode) {
-                    if (currentMode === mode) return;
-
-                    // Load fresh photos from storage
-                    const photos = await StorageEngine.getAllPhotos();
-
-                    // Fade to black
-                    const fadeOverlay = document.querySelector('.fade-overlay');
-                    await gsap.to(fadeOverlay, { opacity: 1, duration: 0.6 });
-
-                    if (currentMode === 'viewer') {
-                        document.getElementById('canvas-container').style.display = 'none';
-                        document.getElementById('overlay-html').style.display = 'none';
-                        NarrativeEngine.stop();
-                    } else if (currentMode === 'studio') {
-                        ControlStudio.destroy();
-                    }
-
-                    currentMode = mode;
-
-                    if (mode === 'viewer') {
-                        document.getElementById('canvas-container').style.display = 'block';
-                        document.getElementById('overlay-html').style.display = 'block';
-                        document.getElementById('studio-root').style.display = 'none';
-
-                        NarrativeEngine.init(photos, sceneData.scene, sceneData.camera);
-                        NarrativeEngine.start();
-                    } else {
-                        document.getElementById('canvas-container').style.display = 'none';
-                        document.getElementById('overlay-html').style.display = 'none';
-                        document.getElementById('studio-root').style.display = 'flex';
-
-                        ControlStudio.init();
-                    }
-
-                    await gsap.to(fadeOverlay, { opacity: 0, duration: 0.6 });
-                },
-
-                setupAnimationLoop(sceneData) {
-                    sceneData.renderer.setAnimationLoop(() => {
-                        sceneData.composer.render();
-                    });
+            deletePhoto(idx) {
+                const photo = this.photos[idx];
+                this.photos.splice(idx, 1);
+                if (this.db && photo.id) {
+                    const tx = this.db.transaction('photos', 'readwrite');
+                    tx.objectStore('photos').delete(photo.id);
                 }
-            };
-        })();
+                this.renderPhotos();
+            }
 
-        // Initialize app
-        function waitForLibraries() {
-            return new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => {
-                    reject(new Error('CDN libraries failed to load. Check your internet connection.'));
-                }, 15000);
+            async switchMode(newMode) {
+                if (this.mode === newMode) return;
 
-                const checkLibs = () => {
-                    if (typeof THREE !== 'undefined' && typeof gsap !== 'undefined') {
-                        clearTimeout(timeout);
-                        resolve();
-                    } else {
-                        setTimeout(checkLibs, 100);
-                    }
+                // Fade
+                const fade = document.getElementById('fade');
+                await gsap.to(fade, { opacity: 1, duration: 0.4 });
+
+                // Hide current
+                document.getElementById('viewer').style.display = 'none';
+                document.getElementById('studio').style.display = 'none';
+
+                this.mode = newMode;
+
+                // Show new
+                if (newMode === 'viewer') {
+                    document.getElementById('viewer').style.display = 'block';
+                    this.startSequence();
+                } else {
+                    document.getElementById('studio').style.display = 'block';
+                }
+
+                await gsap.to(fade, { opacity: 0, duration: 0.4 });
+            }
+
+            startSequence() {
+                if (this.photos.length === 0) return;
+
+                const playPhoto = (idx) => {
+                    const photo = this.photos[idx];
+                    const duration = photo.duration || 15;
+
+                    // Simple animation: photo appears, holds, disappears
+                    gsap.timeline()
+                        .to({}, { duration })
+                        .then(() => {
+                            if (idx < this.photos.length - 1) {
+                                playPhoto(idx + 1);
+                            } else {
+                                // Loop back
+                                this.startSequence();
+                            }
+                        });
                 };
-                checkLibs();
-            });
+
+                playPhoto(0);
+            }
+
+            render() {
+                this.renderer.render(this.scene, this.camera);
+                if (this.particles) this.particles.rotation.x += 0.0001;
+            }
+
+            onResize() {
+                const w = window.innerWidth, h = window.innerHeight;
+                this.camera.aspect = w / h;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(w, h);
+            }
         }
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                await waitForLibraries();
-                document.getElementById('loading-indicator').style.opacity = '0.5';
-                await AppController.init();
-                document.getElementById('loading-indicator').style.display = 'none';
-            } catch (error) {
-                console.error('Fatal Error:', error);
-                document.getElementById('loading-indicator').innerHTML = `
-                    <div style="font-size:18px;color:#ff6464;margin-bottom:16px;">⚠️ Error Loading</div>
-                    <div style="font-size:14px;color:#aaa;margin-bottom:16px;">${error.message}</div>
-                    <div style="font-size:12px;color:#666;font-family:monospace;">Try refreshing the page or use a different browser</div>
-                `;
-            }
-        });
+        const app = new App();
+        window.addEventListener('DOMContentLoaded', () => app.init());
     </script>
 </body>
 </html>
